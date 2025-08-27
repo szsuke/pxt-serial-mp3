@@ -14,11 +14,11 @@ namespace SerialMP3 {
         }
     }
 
+    // 共通送信（LENは「自分(1)+CMD(1)+PARAMS数」= 2 + params.length）
     function send(cmd: number, params: number[] = []) {
         ensureInit()
-        // LEN = 自分自身(1) + CMD(1) + PARAMS 個数
         const len = 2 + params.length
-        const arr: number[] = [0x7E, len, cmd, ...params, 0x7E]
+        const arr: number[] = [0x7E, len, (cmd & 0xFF), ...params.map(v => v & 0xFF), 0x7E]
         const buf = pins.createBufferFromArray(arr)
         serial.writeBuffer(buf)
     }
@@ -50,7 +50,7 @@ namespace SerialMP3 {
     export function setVolume(level: number) {
         if (level < 0) level = 0
         if (level > 31) level = 31
-        send(0xA7, [level]) // 例: 7E 03 A7 14 7E
+        send(0xA7, [level])
     }
 
     export enum PlayMode {
@@ -69,6 +69,7 @@ namespace SerialMP3 {
         send(0xA9, [mode])
     }
 
+    // SD通し番号で曲を再生（1〜65535）
     //% block="MP3 曲番号 %index を再生 (SD通し番号)"
     //% index.min=1 index.max=65535 index.defl=1
     export function playByIndex(index: number) {
