@@ -14,12 +14,24 @@ namespace SerialMP3 {
         }
     }
 
-    // 共通送信（LENは「自分(1)+CMD(1)+PARAMS数」= 2 + params.length）
+    // 共通送信（LEN は「自分(1) + CMD(1) + PARAMS数」= 2 + params.length）
     function send(cmd: number, params: number[] = []) {
         ensureInit()
-        const len = 2 + params.length
-        const arr: number[] = [0x7E, len, (cmd & 0xFF), ...params.map(v => v & 0xFF), 0x7E]
-        const buf = pins.createBufferFromArray(arr)
+        const n = params.length
+        const len = 2 + n
+        const buf = pins.createBuffer(4 + n) // 0:7E 1:LEN 2:CMD 3..:PARAMS 末尾:7E
+
+        buf.setNumber(NumberFormat.UInt8LE, 0, 0x7E)
+        buf.setNumber(NumberFormat.UInt8LE, 1, len)
+        buf.setNumber(NumberFormat.UInt8LE, 2, cmd & 0xFF)
+
+        // PARAMS を詰める
+        for (let i = 0; i < n; i++) {
+            let v = params[i] & 0xFF
+            buf.setNumber(NumberFormat.UInt8LE, 3 + i, v)
+        }
+
+        buf.setNumber(NumberFormat.UInt8LE, 3 + n, 0x7E)
         serial.writeBuffer(buf)
     }
 
