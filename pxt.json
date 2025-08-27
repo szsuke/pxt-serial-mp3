@@ -1,13 +1,14 @@
-{
-  "name": "serial-mp3",
-  "version": "0.0.1",
-  "description": "Control Seeed Serial MP3 Player from micro:bit via UART",
-  "license": "MIT",
-  "dependencies": {
-    "device": "*"
-  },
-  "files": [
-    "main.ts"
-  ],
-  "public": true
-}
+ {
+   "name": "serial-mp3",
+   "version": "0.0.1",
+   "description": "Control Seeed Serial MP3 Player from micro:bit via UART",
+   "license": "MIT",
+   "dependencies": {
+-    "device": "*"
++    "core": "*"
+   },
+   "files": [
+     "main.ts"
+   ],
+   "public": true
+ }
