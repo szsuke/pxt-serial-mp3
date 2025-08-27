@@ -1,6 +1,6 @@
 {
   "name": "serial-mp3",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Control Seeed Serial MP3 Player from micro:bit via UART",
   "license": "MIT",
   "dependencies": {
