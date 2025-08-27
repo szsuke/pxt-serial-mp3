@@ -14,23 +14,22 @@ namespace SerialMP3 {
         }
     }
 
-    // 共通送信（LEN は「自分(1) + CMD(1) + PARAMS数」= 2 + params.length）
-    function send(cmd: number, params: number[] = []) {
+    // LEN = 自分(1) + CMD(1) + PARAM個数
+    function send(cmd: number, params?: number[]) {
         ensureInit()
-        const n = params.length
-        const len = 2 + n
-        const buf = pins.createBuffer(4 + n) // 0:7E 1:LEN 2:CMD 3..:PARAMS 末尾:7E
+        let n = 0
+        if (!params) params = []
+        else n = params.length
 
+        const len = 2 + n
+        const buf = pins.createBuffer(4 + n) // 7E | LEN | CMD | PARAM... | 7E
         buf.setNumber(NumberFormat.UInt8LE, 0, 0x7E)
         buf.setNumber(NumberFormat.UInt8LE, 1, len)
         buf.setNumber(NumberFormat.UInt8LE, 2, cmd & 0xFF)
-
-        // PARAMS を詰める
         for (let i = 0; i < n; i++) {
             let v = params[i] & 0xFF
             buf.setNumber(NumberFormat.UInt8LE, 3 + i, v)
         }
-
         buf.setNumber(NumberFormat.UInt8LE, 3 + n, 0x7E)
         serial.writeBuffer(buf)
     }
@@ -38,9 +37,7 @@ namespace SerialMP3 {
     //% block="MP3 初期化 TX %tx RX %rx 速度 %baud"
     //% tx.defl=SerialPin.P1 rx.defl=SerialPin.P2 baud.defl=BaudRate.BaudRate9600
     export function init(tx: SerialPin, rx: SerialPin, baud: BaudRate) {
-        _tx = tx
-        _rx = rx
-        _baud = baud
+        _tx = tx; _rx = rx; _baud = baud
         inited = false
         ensureInit()
     }
@@ -77,11 +74,8 @@ namespace SerialMP3 {
     }
 
     //% block="MP3 再生モードを %mode にする"
-    export function setPlayMode(mode: PlayMode) {
-        send(0xA9, [mode])
-    }
+    export function setPlayMode(mode: PlayMode) { send(0xA9, [mode]) }
 
-    // SD通し番号で曲を再生（1〜65535）
     //% block="MP3 曲番号 %index を再生 (SD通し番号)"
     //% index.min=1 index.max=65535 index.defl=1
     export function playByIndex(index: number) {
@@ -89,6 +83,6 @@ namespace SerialMP3 {
         if (index > 65535) index = 65535
         const hi = (index >> 8) & 0xFF
         const lo = index & 0xFF
-        send(0xA0, [hi, lo]) // 例: 7E 04 A0 00 01 7E
+        send(0xA0, [hi, lo]) // 期待: 7E 04 A0 00 01 7E
     }
 }
