@@ -14,18 +14,12 @@ namespace SerialMP3 {
         }
     }
 
-    function send(cmd: number, params?: number[]) {
+    function send(cmd: number, params: number[] = []) {
         ensureInit()
-        const p = params || []   // ← undefined のときは空配列に
-        const n = p.length
-        const buf = pins.createBuffer(4 + n) // 0x7E LEN CMD PARAMS... 0x7E
-        buf.setNumber(NumberFormat.UInt8LE, 0, 0x7E)
-        buf.setNumber(NumberFormat.UInt8LE, 1, 1 + n)
-        buf.setNumber(NumberFormat.UInt8LE, 2, cmd)
-        for (let i = 0; i < n; i++) {
-            buf.setNumber(NumberFormat.UInt8LE, 3 + i, p[i])
-        }
-        buf.setNumber(NumberFormat.UInt8LE, 3 + n, 0x7E)
+        // LEN = 自分自身(1) + CMD(1) + PARAMS 個数
+        const len = 2 + params.length
+        const arr: number[] = [0x7E, len, cmd, ...params, 0x7E]
+        const buf = pins.createBufferFromArray(arr)
         serial.writeBuffer(buf)
     }
 
@@ -40,31 +34,23 @@ namespace SerialMP3 {
     }
 
     //% block="MP3 一時停止/再開"
-    export function pauseResume() {
-        send(0xA3)
-    }
+    export function pauseResume() { send(0xA3) }
 
     //% block="MP3 停止"
-    export function stop() {
-        send(0xA4)
-    }
+    export function stop() { send(0xA4) }
 
     //% block="MP3 次の曲"
-    export function next() {
-        send(0xA5)
-    }
+    export function next() { send(0xA5) }
 
     //% block="MP3 前の曲"
-    export function prev() {
-        send(0xA6)
-    }
+    export function prev() { send(0xA6) }
 
     //% block="MP3 音量を %level にする (0–31)"
     //% level.min=0 level.max=31 level.defl=20
     export function setVolume(level: number) {
         if (level < 0) level = 0
         if (level > 31) level = 31
-        send(0xA7, [level])
+        send(0xA7, [level]) // 例: 7E 03 A7 14 7E
     }
 
     export enum PlayMode {
@@ -90,6 +76,6 @@ namespace SerialMP3 {
         if (index > 65535) index = 65535
         const hi = (index >> 8) & 0xFF
         const lo = index & 0xFF
-        send(0xA0, [hi, lo])
+        send(0xA0, [hi, lo]) // 例: 7E 04 A0 00 01 7E
     }
 }
