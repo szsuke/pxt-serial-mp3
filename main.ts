@@ -1,6 +1,3 @@
-/**
- * Serial MP3
- */
 //% color=#5C81A6 icon="\uf001" block="Serial MP3"
 namespace SerialMP3 {
     let inited = false
