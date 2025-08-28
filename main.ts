@@ -1,142 +1,100 @@
-//% color=#5C81A6 icon="\uf001" block="Serial MP3"
-namespace SerialMP3 {
+//% color=#2db2ff icon="\uf001" block="Grove MP3 (KT403A)"
+namespace groveMp3 {
     let inited = false
-    let _tx: SerialPin = SerialPin.P1
-    let _rx: SerialPin = SerialPin.P2
-    let _baud: BaudRate = BaudRate.BaudRate9600
-    let _paused = false
 
-    function ensureInit() {
-        if (!inited) {
-            serial.redirect(_tx, _rx, _baud)
-            serial.setTxBufferSize(32)
-            serial.setRxBufferSize(32)
-            basic.pause(200)
-            inited = true
-        }
-    }
-
-    function send2(cmd: number, dh: number, dl: number) {
-        ensureInit()
+    // 内部: コマンド送信 (8バイト固定)
+    function send(cmd: number, param: number) {
         const buf = pins.createBuffer(8)
-        buf[0] = 0x7E; buf[1] = 0xFF; buf[2] = 0x06
-        buf[3] = cmd & 0xFF
-        buf[4] = 0x00 // no feedback
-        buf[5] = dh & 0xFF
-        buf[6] = dl & 0xFF
-        buf[7] = 0xEF
+        buf.setNumber(NumberFormat.UInt8LE, 0, 0x7E)
+        buf.setNumber(NumberFormat.UInt8LE, 1, 0xFF)
+        buf.setNumber(NumberFormat.UInt8LE, 2, 0x06) // length=6 固定
+        buf.setNumber(NumberFormat.UInt8LE, 3, cmd & 0xFF)
+        buf.setNumber(NumberFormat.UInt8LE, 4, 0x00) // no feedback
+        buf.setNumber(NumberFormat.UInt8LE, 5, (param >> 8) & 0xFF) // high
+        buf.setNumber(NumberFormat.UInt8LE, 6, param & 0xFF)        // low
+        buf.setNumber(NumberFormat.UInt8LE, 7, 0xEF)
         serial.writeBuffer(buf)
+        basic.pause(20)
     }
-    function send0(cmd: number) { send2(cmd, 0, 0) }
 
-    //% block="MP3 初期化 TX %tx RX %rx 速度 %baud"
-    //% tx.defl=SerialPin.P1 rx.defl=SerialPin.P2 baud.defl=BaudRate.BaudRate9600
+    /**
+     * 初期化（TX/RX/ボーレート）
+     * @param tx 送信ピン
+     * @param rx 受信ピン
+     */
+    //% blockId=kt403a_init block="KT403A を初期化 TX %tx RX %rx | 速度 %baud"
+    //% tx.defl=SerialPin.P1 rx.defl=SerialPin.P0 baud.defl=BaudRate.BaudRate9600
     export function init(tx: SerialPin, rx: SerialPin, baud: BaudRate) {
-        _tx = tx; _rx = rx; _baud = baud
-        inited = false
-        ensureInit()
+        serial.redirect(tx, rx, baud)
+        inited = true
+        basic.pause(100)
     }
 
-    // === デバイス選択 ===
-    //% block="MP3 デバイスを microSD にする"
-    export function selectMicroSD() {
-        // KT403A: CMD=0x09 (Select Device), DL=0x02 (microSD)
-        send2(0x09, 0x00, 0x02)
-        basic.pause(200) // 切替後は少し待つ
+    /**
+     * 音量を設定 (0-30)
+     */
+    //% blockId=kt403a_volume block="音量を %vol にする (0~30)"
+    //% vol.min=0 vol.max=30 vol.defl=20
+    export function setVolume(vol: number) {
+        if (!inited) return
+        if (vol < 0) vol = 0
+        if (vol > 30) vol = 30
+        send(0x06, vol) // Set Volume
     }
 
-    // === 再生制御 ===
-    //% block="MP3 一時停止/再開"
-    export function pauseResume() {
-        _paused = !_paused
-        send0(_paused ? 0x0E : 0x0D) // 0x0E=pause, 0x0D=play
+    /**
+     * インデックスで再生（SD順序依存）
+     */
+    //% blockId=kt403a_play_index block="曲番号 %index を再生"
+    //% index.min=1 index.defl=1
+    export function playIndex(index: number) {
+        if (!inited) return
+        send(0x03, index) // Play by index
     }
 
-    //% block="MP3 停止"
-    export function stop() { send0(0x16) }
-
-    //% block="MP3 次の曲"
-    export function next() { send0(0x01) }
-
-    //% block="MP3 前の曲"
-    export function prev() { send0(0x02) }
-
-    //% block="MP3 音量を %level にする (0–30)"
-    //% level.min=0 level.max=30 level.defl=20
-    export function setVolume(level: number) {
-        if (level < 0) level = 0
-        if (level > 30) level = 30
-        send2(0x06, 0x00, level) // CMD=0x06 指定音量
+    /**
+     * MP3フォルダの index を再生 (MP3/0001.mp3 など)
+     */
+    //% blockId=kt403a_play_mp3 block="MP3フォルダの %index を再生"
+    //% index.min=1 index.defl=1
+    export function playMP3(index: number) {
+        if (!inited) return
+        send(0x12, index) // Play MP3 folder index
     }
 
-    export enum PlayMode {
-        //% block="単曲"
-        One = 0,
-        //% block="単曲リピート"
-        OneRepeat = 1,
-        //% block="全曲リピート（ルート）"
-        AllRepeat = 2,
-        //% block="ランダム（フォルダ1）"
-        Random = 3
-    }
-
-    //% block="MP3 再生モードを %mode にする"
-    export function setPlayMode(mode: PlayMode) {
-        switch (mode) {
-            case PlayMode.One:
-                // 単曲モード：全曲ループOFF
-                send2(0x11, 0x00, 0x00)
-                break
-            case PlayMode.OneRepeat:
-                // 現在曲リピート
-                send2(0x19, 0x00, 0x00)
-                break
-            case PlayMode.AllRepeat:
-                // 全曲ループON（ルート直下）
-                send2(0x11, 0x00, 0x01)
-                break
-            case PlayMode.Random:
-                // フォルダ1をシャッフル（授業用の簡易デフォルト）
-                send2(0x28, 0x00, 0x01)
-                break
-        }
-    }
-
-    //% block="MP3 曲番号 %index を再生 (通し番号)"
-    //% index.min=1 index.max=2999 index.defl=1
-    export function playByIndex(index: number) {
-        if (index < 1) index = 1
-        if (index > 2999) index = 2999
-        const hi = (index >> 8) & 0xFF
-        const lo = index & 0xFF
-        send2(0x03, hi, lo) // CMD=0x03 指定番号再生（コピー順）
-    }
-
-    // === 便利ブロック（任意） ===
-
-    //% block="MP3 フォルダ %folder をシャッフル (01–99)"
+    /**
+     * フォルダ番号と曲番号で再生 (例: 01/001***.mp3)
+     */
+    //% blockId=kt403a_play_folder block="フォルダ %folder の 曲 %index を再生"
     //% folder.min=1 folder.max=99 folder.defl=1
-    export function shuffleFolder(folder: number) {
-        if (folder < 1) folder = 1
-        if (folder > 99) folder = 99
-        send2(0x28, 0x00, folder)
+    //% index.min=1 index.max=255 index.defl=1
+    export function playInFolder(folder: number, index: number) {
+        if (!inited) return
+        const param = ((folder & 0xFF) << 8) | (index & 0xFF)
+        send(0x0F, param) // Play directory + file index
     }
 
-    //% block="MP3 フォルダ %folder をループ (01–99)"
-    //% folder.min=1 folder.max=99 folder.defl=1
-    export function loopFolder(folder: number) {
-        if (folder < 1) folder = 1
-        if (folder > 99) folder = 99
-        send2(0x17, 0x00, folder)
-    }
+    // 基本操作
+    //% block="停止する"
+    export function stop() { if (inited) send(0x16, 0) }  // Stop
+    //% block="一時停止"
+    export function pause() { if (inited) send(0x0E, 0) } // Pause
+    //% block="再開"
+    export function resume() { if (inited) send(0x0D, 0) } // Resume
+    //% block="次の曲"
+    export function next() { if (inited) send(0x01, 0) }   // Next
+    //% block="前の曲"
+    export function prev() { if (inited) send(0x02, 0) }   // Previous
 
-    //% block="MP3 フォルダMP3の番号 %index を再生 (0001–3000)"
-    //% index.min=1 index.max=3000 index.defl=1
-    export function playFromMP3(index: number) {
-        if (index < 1) index = 1
-        if (index > 3000) index = 3000
-        const hi = (index >> 8) & 0xFF
-        const lo = index & 0xFF
-        send2(0x12, hi, lo) // MP3/0001.mp3 形式で安定運用
+    /**
+     * EQ設定 (0:Normal,1:Pop,2:Rock,3:Jazz,4:Classic,5:Bass)
+     */
+    //% block="EQ を %mode にする (0~5)"
+    //% mode.min=0 mode.max=5 mode.defl=0
+    export function setEQ(mode: number) {
+        if (!inited) return
+        if (mode < 0) mode = 0
+        if (mode > 5) mode = 5
+        send(0x07, mode)
     }
 }
