@@ -1,4 +1,4 @@
-//% color=#2db2ff icon="\uf001" block="Grove MP3 (KT403A)"
+//% color=#2db2ff icon="\uf001" block="GroveMP3(KT403A)"
 //% groups='["セットアップ","再生をえらぶ","再生をそうさ","発展"]'
 namespace groveMp3 {
     let inited = false
