@@ -1,14 +1,14 @@
 {
-  "name": "serial-mp3",
-  "version": "0.0.10",
-  "description": "Control Seeed Serial MP3 Player from micro:bit via UART",
-  "license": "MIT",
+  "name": "pxt-serial-mp3",
+  "version": "0.0.11",
+  "description": "Grove MP3 v2.0 (KT403A) for micro:bit",
   "dependencies": {
     "core": "*"
   },
-  "supportedTargets": ["microbit"],
   "files": [
-    "main.ts"
+    "main.ts",
+    "README.md"
   ],
+  "license": "MIT",
   "public": true
 }
