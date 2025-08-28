@@ -9,7 +9,7 @@ Grove MP3 v2.0 (KT403A) を micro\:bit から **UART(シリアル)** で制御�
 MakeCode の **拡張機能を追加** で、このリポジトリの URL を指定します：
 
 ```
-https://github.com/＜あなたのGitHubユーザー名＞/pxt-serial-mp3
+https://github.com/szsuke/pxt-serial-mp3
 ```
 
 > リポジトリ名と `pxt.json` の `name` は `pxt-serial-mp3`、バージョンは `0.0.11`。
@@ -21,9 +21,13 @@ https://github.com/＜あなたのGitHubユーザー名＞/pxt-serial-mp3
 * Groveシールド for micro\:bit を使う場合：UART ポートへ接続。
 * 直接配線の場合：
 
-  * micro\:bit **TX →** MP3モジュール **RX**
-  * micro\:bit **RX →** MP3モジュール **TX**
+  * micro\:bit **TX →** MP3モジュール **TX**
+  * micro\:bit **RX →** MP3モジュール **RX**
   * **5V** と **GND** を接続（Groveケーブル推奨）
+
+### 補足
+
+本来 UART は「TX ↔ RX」をクロス接続する必要がありますが、この拡張ライブラリ内部でピン指定を反転処理しています。そのため、**子どもたちは「TXはTX」「RXはRX」と同じ名前同士をつなげば正しく動作**します。教材としても説明しやすくなるように設計しています。
 
 既定ボーレートは **9600 bps**。
 
