@@ -1,6 +1,6 @@
 {
   "name": "pxt-serial-mp3",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Grove MP3 v2.0 (KT403A) for micro:bit",
   "dependencies": {
     "core": "*"
